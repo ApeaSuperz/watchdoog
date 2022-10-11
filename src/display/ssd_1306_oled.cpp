@@ -1,0 +1,86 @@
+#include "ssd_1306_oled.h"
+
+Screen::Screen() : u8g2(U8G2_R0, SCL, SDA) {}
+
+void Screen::setup() {
+    u8g2.begin();
+    u8g2.enableUTF8Print();
+}
+
+uint8_t Screen::computeStringWidth(const __FlashStringHelper *str) {
+    uint8_t stringLength = strlen_P(reinterpret_cast<const char *>(str));
+    auto *string = reinterpret_cast<char *>(malloc((stringLength + 1) * sizeof(char)));
+    for (int i = 0; i < stringLength; i++) {
+        string[i] = pgm_read_byte_near(reinterpret_cast<int>(str) + i);
+    }
+    string[stringLength] = '\0';
+    uint8_t result = computeStringWidth(string);
+    free(string);
+    return result;
+}
+
+uint8_t Screen::computeStringWidth(const char *str) {
+    return u8g2.getUTF8Width(str);
+}
+
+void Screen::draw(const __FlashStringHelper *text, uint8_t x, uint8_t y) {
+    u8g2.setCursor(x, y);
+    u8g2.print(text);
+}
+
+void Screen::draw(const char *text, uint8_t x, uint8_t y) {
+    u8g2.drawUTF8(x, y, text);
+}
+
+void Screen::drawCenterHorizontal(const __FlashStringHelper *text, uint8_t y) {
+    uint8_t stringLength = strlen_P(reinterpret_cast<const char *>(text));
+    auto *string = reinterpret_cast<char *>(malloc((stringLength + 1) * sizeof(char)));
+    for (int i = 0; i < stringLength; i++) {
+        string[i] = pgm_read_byte_near(reinterpret_cast<int>(text) + i);
+    }
+    string[stringLength] = '\0';
+    drawCenterHorizontal(string, y);
+    free(string);
+}
+
+void Screen::drawCenterHorizontal(const char *text, uint8_t y) {
+    const uint8_t x = (WIDTH - computeStringWidth(text)) / 2;
+    u8g2.drawUTF8(x, y, text);
+}
+
+void Screen::drawEndHorizontal(const __FlashStringHelper *text, uint8_t y) {
+    uint8_t stringLength = strlen_P(reinterpret_cast<const char *>(text));
+    auto *string = reinterpret_cast<char *>(malloc((stringLength + 1) * sizeof(char)));
+    for (int i = 0; i < stringLength; i++) {
+        string[i] = pgm_read_byte_near(reinterpret_cast<int>(text) + i);
+    }
+    string[stringLength] = '\0';
+    drawEndHorizontal(string, y);
+    free(string);
+}
+
+void Screen::drawEndHorizontal(const char *text, uint8_t y) {
+    const uint8_t x = WIDTH - computeStringWidth(text);
+    u8g2.drawUTF8(x, y, text);
+}
+
+void Screen::setFontSize(uint8_t size) {
+    switch (size) {
+        case 12:
+            u8g2.setFont(u8g2_font_watchdoog12_t);
+            break;
+        case 13:
+            u8g2.setFont(u8g2_font_watchdoog13_t);
+            break;
+        case 15:
+            u8g2.setFont(u8g2_font_watchdoog15_t);
+            break;
+        case 16:
+            u8g2.setFont(u8g2_font_watchdoog16_t);
+            break;
+        case 14:
+        default:
+            u8g2.setFont(u8g2_font_watchdoog14_t);
+            break;
+    }
+}
