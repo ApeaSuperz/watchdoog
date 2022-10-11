@@ -39,7 +39,6 @@ void setup() {
     screen.setup();
 
     screen.u8g2.firstPage();
-    screen.u8g2.clear();
     screen.u8g2.setFont(u8g2_font_watchdoog14_t);
     if (!finger.getCore().verifyPassword()) {
         do {
@@ -72,7 +71,7 @@ void setup() {
         screen.drawCenterHorizontal(F("Watchdoog"), 13 + 16 + (64 - 13 - 16) / 2);
     } while (screen.u8g2.nextPage());
 
-    finger.enroll(1, &screen);
+    // finger.enroll(1, &screen);
 }
 
 uint8_t read_number() {
@@ -86,43 +85,18 @@ uint8_t read_number() {
 }
 
 void loop() {
-    // Serial.println("Ready to enroll a fingerprint!");
-    // Serial.println("Please type in the ID # (from 1 to 127) you want to save this finger as...");
-    // uint8_t id = read_number();
-    // if (id == 0) {// ID #0 not allowed, try again!
-    //     return;
-    // }
-    // Serial.print("Enrolling ID #");
-    // Serial.println(id);
-    //
-    // while (finger.enroll(id) != FINGERPRINT_OK);
-
-    // finger.enroll(2, &screen);
-
     tick++;
 
     const boolean isFingerPressed = finger.isFingerPressed();
     if (needScanFinger && isFingerPressed) {
         finger.getCore().LEDcontrol(true);
-        int32_t status = finger.verify();
+        int32_t status = finger.verify(&screen);
         if (status <= 0 && status != finger.NO_FINGER) {
-            screen.u8g2.setPowerSave(false);
-            screen.u8g2.firstPage();
-            screen.setFontSize(14);
-            do {
-                screen.drawCenterHorizontal(F("你寄吧谁？"), 14 + (Screen::HEIGHT - 14) / 2);
-            } while (screen.u8g2.nextPage());
             buzzer.warning();
 
             tick = 0;
             needScanFinger = false;
         } else if (status > 0) {
-            screen.u8g2.setPowerSave(false);
-            screen.u8g2.firstPage();
-            screen.setFontSize(14);
-            do {
-                screen.drawCenterHorizontal(F("欢迎回来"), 14 + (Screen::HEIGHT - 14) / 2);
-            } while (screen.u8g2.nextPage());
             buzzer.success();
 
             tick = 0;

@@ -19,9 +19,9 @@ public:
 
     int8_t enroll(uint8_t id, Screen *screen);
 
-    int32_t verify();
+    int32_t verify(Screen *screen);
 
-    uint8_t remove(uint8_t id);
+    uint8_t remove(uint8_t id, Screen *screen);
 
     uint8_t count();
 

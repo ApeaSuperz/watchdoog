@@ -28,264 +28,256 @@ Adafruit_Fingerprint Finger::getCore() {
     return finger;
 }
 
-// TODO: display on LED
-int8_t Finger::enroll(uint8_t id, Screen *screen) {
-    // Serial.print(F("Waiting for valid finger to enroll as #"));
-    uint8_t fingerIdX = 0;
-    if (screen != nullptr) {
-        screen->u8g2.firstPage();
-        do {
-            screen->setFontSize(12);
-            screen->draw(F("注册指纹#"), 0, 12);
-            fingerIdX = screen->computeStringWidth(F("注册指纹#")) + 2;
-            screen->u8g2.setCursor(fingerIdX, 12);
-            screen->u8g2.print(id);
-            screen->setFontSize(14);
-            screen->drawCenterHorizontal(F("请按下手指"), 14 + (Screen::HEIGHT - 12 - 14) / 2);
-        } while (screen->u8g2.nextPage());
+/**
+ * 获取指纹编号数字在屏幕上的 X 坐标，如果没有计算过则计算后返回。
+ * @param screen 屏幕
+ * @param fingerIdXPtr 坐标的指针
+ * @return X 坐标
+ */
+static uint8_t getOrComputeFingerIdX(Screen &screen, uint8_t *const fingerIdXPtr) {
+    uint8_t fingerIdX;
+    if (fingerIdXPtr == nullptr || *fingerIdXPtr == 0) {
+        fingerIdX = screen.computeStringWidth(F("注册指纹#")) + 2;
+        *fingerIdXPtr = fingerIdX;
+    } else {
+        fingerIdX = *fingerIdXPtr;
     }
-    // Serial.println(id);
+    return fingerIdX;
+}
 
+static void displayEnrollScreen(uint8_t fingerId, Screen *screen, uint8_t *const fingerIdXPtr,
+                                const __FlashStringHelper *title, const __FlashStringHelper *summary = nullptr) {
+    if (screen == nullptr) return;
+
+    screen->u8g2.setPowerSave(false);
+
+    screen->u8g2.firstPage();
+    do {
+        screen->setFontSize(12);
+        screen->draw(F("录入指纹#"), 0, 12);
+        screen->u8g2.setCursor(getOrComputeFingerIdX(*screen, fingerIdXPtr), 12);
+        screen->u8g2.print(fingerId);
+        screen->setFontSize(14);
+        screen->drawCenterHorizontal(title, 14 + (Screen::HEIGHT - 12 - 14) / 2);
+        if (summary != nullptr) {
+            screen->setFontSize(12);
+            screen->drawEndHorizontal(summary, Screen::HEIGHT - 12);
+        }
+    } while (screen->u8g2.nextPage());
+}
+
+int8_t Finger::enroll(uint8_t id, Screen *screen) {
+    uint8_t fingerIdX = 0;
     int status = -1;
+
+    // 第一轮指纹收集
     while (status != FINGERPRINT_OK) {
         status = finger.getImage();
         switch (status) {
             case FINGERPRINT_OK:
-                // Serial.println(F("Image taken"));
-                if (screen != nullptr) {
-                    screen->u8g2.firstPage();
-                    do {
-                        screen->setFontSize(12);
-                        screen->draw(F("注册指纹#"), 0, 12);
-                        screen->u8g2.setCursor(fingerIdX, 12);
-                        screen->u8g2.print(id);
-                        screen->setFontSize(14);
-                        screen->drawCenterHorizontal(F("成像中..."), 14 + (Screen::HEIGHT - 12 - 14) / 2);
-                    } while (screen->u8g2.nextPage());
-                }
                 break;
             case FINGERPRINT_NOFINGER:
-                if (screen != nullptr) {
-                    screen->u8g2.firstPage();
-                    do {
-                        screen->setFontSize(12);
-                        screen->draw(F("注册指纹#"), 0, 12);
-                        screen->u8g2.setCursor(fingerIdX, 12);
-                        screen->u8g2.print(id);
-                        screen->setFontSize(14);
-                        screen->drawCenterHorizontal(F("请按下手指"), 14 + (Screen::HEIGHT - 12 - 14) / 2);
-                        screen->setFontSize(12);
-                        screen->drawEndHorizontal(F("正在等待手指..."), Screen::HEIGHT - 12);
-                    } while (screen->u8g2.nextPage());
-                }
+                displayEnrollScreen(id, screen, &fingerIdX, F("按下手指"), F("正在等待…"));
                 break;
             case FINGERPRINT_PACKETRECIEVEERR:
-                // Serial.println(F("Communication error"));
-                if (screen != nullptr) {
-                    screen->u8g2.firstPage();
-                    do {
-                        screen->setFontSize(12);
-                        screen->drawCenterHorizontal(F("ERROR"), 12 + (Screen::HEIGHT - 12 - 16) / 2);
-                        screen->setFontSize(16);
-                        screen->drawCenterHorizontal(F("通信错误"), 12 + 16 + (Screen::HEIGHT - 12 - 16) / 2);
-                    } while (screen->u8g2.nextPage());
-                }
+                displayEnrollScreen(id, screen, &fingerIdX, F("通信错误"), F("请重试"));
                 break;
             case FINGERPRINT_IMAGEFAIL:
-                // Serial.println(F("Imaging error"));
-                if (screen != nullptr) {
-                    screen->u8g2.firstPage();
-                    do {
-                        screen->setFontSize(12);
-                        screen->drawCenterHorizontal(F("ERROR"), 12 + (Screen::HEIGHT - 12 - 16) / 2);
-                        screen->setFontSize(16);
-                        screen->drawCenterHorizontal(F("无法成像"), 12 + 16 + (Screen::HEIGHT - 12 - 16) / 2);
-                    } while (screen->u8g2.nextPage());
-                }
+                displayEnrollScreen(id, screen, &fingerIdX, F("成像错误"), F("请重试"));
                 break;
             default:
-                // Serial.println(F("Unknown error"));
-                if (screen != nullptr) {
-                    screen->u8g2.firstPage();
-                    do {
-                        screen->setFontSize(12);
-                        screen->drawCenterHorizontal(F("ERROR"), 12 + (Screen::HEIGHT - 12 - 16) / 2);
-                        screen->setFontSize(16);
-                        screen->drawCenterHorizontal(F("未知错误"), 12 + 16 + (Screen::HEIGHT - 12 - 16) / 2);
-                    } while (screen->u8g2.nextPage());
-                }
+                displayEnrollScreen(id, screen, &fingerIdX, F("未知错误"), F("请重试"));
                 break;
         }
     }
 
+    // 转换指纹信息
+    displayEnrollScreen(id, screen, &fingerIdX, F("成像中"), F("请等待…"));
     status = finger.image2Tz(1);
     switch (status) {
         case FINGERPRINT_OK:
-            // Serial.println(F("Image converted"));
             break;
         case FINGERPRINT_IMAGEMESS:
-            // Serial.println(F("Image too messy"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("图像过于混乱"), F("建议清洁传感器"));
             return IMAGE_MESS;
         case FINGERPRINT_PACKETRECIEVEERR:
-            // Serial.println(F("Communication error"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("通信错误"));
             return PACKET_RECEIVE_ERROR;
         case FINGERPRINT_FEATUREFAIL:
-            // Serial.println(F("Could not find fingerprint features"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("无法确定指纹特征"));
             return FEATURE_FAIL;
         case FINGERPRINT_INVALIDIMAGE:
-            // Serial.println(F("Could not find fingerprint features"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("无法确定指纹特征"));
             return INVALID_IMAGE;
         default:
-            // Serial.println(F("Unknown error"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("未知错误"));
             return UNKNOWN_ERROR;
     }
 
-    // Serial.println(F("Remove your finger"));
-    delay(2000);
+    // 等待移开手指
+    displayEnrollScreen(id, screen, &fingerIdX, F("移开手指"), F("正在等待…"));
+    finger.LEDcontrol(false);
+    while (isFingerPressed()) delay(50);
     status = 0;
-    while (status != FINGERPRINT_NOFINGER) {
-        status = finger.getImage();
-    }
+    while (status != FINGERPRINT_NOFINGER) status = finger.getImage();
+    finger.LEDcontrol(true);
 
+    // 第二轮收集
     status = -1;
-    // Serial.print(F("Place same finger again"));
     while (status != FINGERPRINT_OK) {
         status = finger.getImage();
         switch (status) {
             case FINGERPRINT_OK:
-                // Serial.println(F("Image taken"));
                 break;
             case FINGERPRINT_NOFINGER:
-                // Serial.print(F("."));
+                displayEnrollScreen(id, screen, &fingerIdX, F("按下同个手指"), F("正在等待…"));
                 break;
             case FINGERPRINT_PACKETRECIEVEERR:
-                // Serial.println(F("Communication error"));
+                displayEnrollScreen(id, screen, &fingerIdX, F("通信错误"), F("请重试"));
                 break;
             case FINGERPRINT_IMAGEFAIL:
-                // Serial.println(F("Imaging error"));
+                displayEnrollScreen(id, screen, &fingerIdX, F("成像错误"), F("请重试"));
                 break;
             default:
-                // Serial.println(F("Unknown error"));
+                displayEnrollScreen(id, screen, &fingerIdX, F("未知错误"), F("请重试"));
                 break;
         }
     }
 
+    // 转换
+    displayEnrollScreen(id, screen, &fingerIdX, F("成像中"), F("请等待…"));
     status = finger.image2Tz(2);
     switch (status) {
         case FINGERPRINT_OK:
-            // Serial.println(F("Image converted"));
             break;
         case FINGERPRINT_IMAGEMESS:
-            // Serial.println(F("Image too messy"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("图像过于混乱"), F("建议清洁传感器"));
             return IMAGE_MESS;
         case FINGERPRINT_PACKETRECIEVEERR:
-            // Serial.println(F("Communication error"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("通信错误"));
             return PACKET_RECEIVE_ERROR;
         case FINGERPRINT_FEATUREFAIL:
-            // Serial.println(F("Could not find fingerprint features"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("无法确定指纹特征"));
             return FEATURE_FAIL;
         case FINGERPRINT_INVALIDIMAGE:
-            // Serial.println(F("Could not find fingerprint features"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("无法确定指纹特征"));
             return INVALID_IMAGE;
         default:
-            // Serial.println(F("Unknown error"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("未知错误"));
             return UNKNOWN_ERROR;
     }
 
-    // Serial.print(F("Creating model for #"));
-    Serial.println(id);
+    // 建模
+    displayEnrollScreen(id, screen, &fingerIdX, F("建模中"), F("请等待…"));
     status = finger.createModel();
     switch (status) {
         case FINGERPRINT_OK:
-            // Serial.println(F("Prints matched!"));
             break;
         case FINGERPRINT_PACKETRECIEVEERR:
-            // Serial.println(F("Communication error"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("通信错误"));
             return PACKET_RECEIVE_ERROR;
         case FINGERPRINT_ENROLLMISMATCH:
-            // Serial.println(F("Fingerprints did not match"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("两次指纹不匹配"));
             return ENROLL_MISMATCH;
         default:
-            // Serial.println(F("Unknown error"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("未知错误"));
             return UNKNOWN_ERROR;
     }
 
+    // 存储
     status = finger.storeModel(id);
     switch (status) {
         case FINGERPRINT_OK:
-            // Serial.println(F("Stored!"));
             break;
         case FINGERPRINT_PACKETRECIEVEERR:
-            // Serial.println(F("Communication error"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("通信错误"));
             return PACKET_RECEIVE_ERROR;
         case FINGERPRINT_BADLOCATION:
-            // Serial.println(F("Could not store in that location"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("存储失败"), F("存储地址不可用"));
             return BAD_LOCATION;
         case FINGERPRINT_FLASHERR:
-            // Serial.println(F("Error writing to flash"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("存储失败"), F("无法写入Flash"));
             return FLASH_ERROR;
         default:
-            // Serial.println(F("Unknown error"));
+            displayEnrollScreen(id, screen, &fingerIdX, F("未知错误"));
             return UNKNOWN_ERROR;
     }
 
+    displayEnrollScreen(id, screen, &fingerIdX, F("成功"));
     return OK;
 }
 
-int32_t Finger::verify() {
+static void displayVerifyScreen(Screen *screen,
+                                const __FlashStringHelper *title, const __FlashStringHelper *summary = nullptr) {
+    if (screen == nullptr) return;
+
+    screen->u8g2.setPowerSave(false);
+
+    uint8_t titleY = summary == nullptr ? 16 + (Screen::HEIGHT - 16) / 2 : 16 + (Screen::HEIGHT - 16 - 12 - 4) / 2;
+    screen->u8g2.firstPage();
+    do {
+        screen->setFontSize(16);
+        screen->drawCenterHorizontal(title, titleY);
+        if (summary != nullptr) {
+            screen->setFontSize(12);
+            screen->drawCenterHorizontal(summary, 16 + 12 + 4 + (Screen::HEIGHT - 16 - 12 - 4) / 2);
+        }
+    } while (screen->u8g2.nextPage());
+}
+
+int32_t Finger::verify(Screen *screen) {
     uint8_t status = finger.getImage();
     switch (status) {
         case FINGERPRINT_OK:
-            // Serial.println(F("Image taken"));
             break;
         case FINGERPRINT_NOFINGER:
             return NO_FINGER;
         case FINGERPRINT_PACKETRECIEVEERR:
-            // Serial.println(F("Communication error"));
+            displayVerifyScreen(screen, F("通信错误"));
             return PACKET_RECEIVE_ERROR;
         case FINGERPRINT_IMAGEFAIL:
-            // Serial.println(F("Imaging error"));
+            displayVerifyScreen(screen, F("成像错误"));
             return IMAGE_FAIL;
         default:
-            // Serial.println(F("Unknown error"));
+            displayVerifyScreen(screen, F("未知错误"));
             return UNKNOWN_ERROR;
     }
 
+    displayVerifyScreen(screen, F("识别中"), F("请等待…"));
     status = finger.image2Tz();
     switch (status) {
         case FINGERPRINT_OK:
             // Serial.println(F("Image converted"));
             break;
         case FINGERPRINT_IMAGEMESS:
-            // Serial.println(F("Image too messy"));
+            displayVerifyScreen(screen, F("图像过于混乱"), F("建议清洁传感器"));
             return IMAGE_MESS;
         case FINGERPRINT_PACKETRECIEVEERR:
-            // Serial.println(F("Communication error"));
+            displayVerifyScreen(screen, F("通信错误"));
             return PACKET_RECEIVE_ERROR;
         case FINGERPRINT_FEATUREFAIL:
-            // Serial.println(F("Could not find fingerprint features"));
+            displayVerifyScreen(screen, F("无法确定指纹特征"));
             return FEATURE_FAIL;
         case FINGERPRINT_INVALIDIMAGE:
-            // Serial.println(F("Could not find fingerprint features"));
+            displayVerifyScreen(screen, F("无法确定指纹特征"));
             return INVALID_IMAGE;
         default:
-            // Serial.println(F("Unknown error"));
+            displayVerifyScreen(screen, F("未知错误"));
             return UNKNOWN_ERROR;
     }
 
     status = finger.fingerSearch();
     switch (status) {
         case FINGERPRINT_OK:
-            // Serial.println(F("Found a print match!"));
             break;
         case FINGERPRINT_PACKETRECIEVEERR:
-            // Serial.println(F("Communication error"));
+            displayVerifyScreen(screen, F("通信错误"));
             return PACKET_RECEIVE_ERROR;
         case FINGERPRINT_NOTFOUND:
-            // Serial.println(F("Did not find a match"));
+            displayVerifyScreen(screen, F("失败"), F("无匹配指纹"));
             return NOT_FOUND;
         default:
-            // Serial.println(F("Unknown error"));
+            displayVerifyScreen(screen, F("未知错误"));
             return UNKNOWN_ERROR;
     }
 
@@ -294,11 +286,33 @@ int32_t Finger::verify() {
     // Serial.print(F(" with confidence of "));
     // Serial.println(finger.confidence);
 
+    displayVerifyScreen(screen, F("完成"), F("欢迎回家"));
     return finger.fingerID;
 }
 
-// TODO: display on LED
-uint8_t Finger::remove(uint8_t id) {
+static void displayRemoveScreen(uint8_t fingerId, Screen *screen, uint8_t *const fingerIdXPtr,
+                                const __FlashStringHelper *title, const __FlashStringHelper *summary = nullptr) {
+    if (screen == nullptr) return;
+
+    screen->u8g2.setPowerSave(false);
+
+    screen->u8g2.firstPage();
+    do {
+        screen->setFontSize(12);
+        screen->draw(F("删除指纹#"), 0, 12);
+        screen->u8g2.setCursor(getOrComputeFingerIdX(*screen, fingerIdXPtr), 12);
+        screen->u8g2.print(fingerId);
+        screen->setFontSize(14);
+        screen->drawCenterHorizontal(title, 14 + (Screen::HEIGHT - 12 - 14) / 2);
+        if (summary != nullptr) {
+            screen->setFontSize(12);
+            screen->drawEndHorizontal(summary, Screen::HEIGHT - 12);
+        }
+    } while (screen->u8g2.nextPage());
+}
+
+uint8_t Finger::remove(uint8_t id, Screen *screen) {
+    uint8_t fingerIdX = 0;
     uint8_t status = finger.deleteModel(id);
 
     switch (status) {
@@ -306,15 +320,17 @@ uint8_t Finger::remove(uint8_t id) {
             // Serial.println(F("Deleted!"));
             break;
         case FINGERPRINT_PACKETRECIEVEERR:
-            // Serial.println(F("Communication error"));
+            displayRemoveScreen(id, screen, &fingerIdX, F("通信错误"));
             break;
         case FINGERPRINT_BADLOCATION:
-            // Serial.println(F("Could not delete in that location"));
+            displayRemoveScreen(id, screen, &fingerIdX, F("删除失败"), F("存储地址不可用"));
             break;
         case FINGERPRINT_FLASHERR:
-            // Serial.println(F("Error writing to flash"));
+            displayRemoveScreen(id, screen, &fingerIdX, F("删除失败"), F("无法写入Flash"));
             break;
         default:
+            // TODO: 显示错误码
+            displayRemoveScreen(id, screen, &fingerIdX, F("未知错误"));
             // Serial.print(F("Unknown error: 0x"));
             // Serial.println(status, HEX);
             break;
