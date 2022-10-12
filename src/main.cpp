@@ -22,10 +22,24 @@ static const unsigned int TICK = 100;
 
 unsigned long long tick = 0;
 boolean needScanFinger = true;
+uint8_t rotsCount = 0;
 
 Finger finger = Finger(&fingerprint_serial, 4);
 ActiveBuzzer buzzer = ActiveBuzzer(11);
 Screen screen = Screen();
+
+static boolean triggerEgg() {
+    if (rotsCount >= 3) {
+        screen.u8g2.setPowerSave(false);
+        screen.u8g2.firstPage();
+        do {
+            screen.setFontSize(16);
+            screen.drawCenter(F("你坤吧谁？"));
+        } while (screen.u8g2.nextPage());
+        return true;
+    }
+    return false;
+}
 
 void setup() {
     Serial.begin(9600);
@@ -67,11 +81,15 @@ void loop() {
 
             tick = 0;
             needScanFinger = false;
+            rotsCount++;
+
+            triggerEgg();
         } else if (status > 0) {
             buzzer.success();
 
             tick = 0;
             needScanFinger = false;
+            rotsCount = 0;
         }
     } else if (!isFingerPressed) {
         finger.getCore().LEDcontrol(false);
