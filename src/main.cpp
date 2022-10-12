@@ -18,8 +18,6 @@ SoftwareSerial fingerprint_serial(2, 3);
 
 #endif
 
-uint8_t read_number();
-
 static const unsigned int TICK = 100;
 
 unsigned long long tick = 0;
@@ -39,49 +37,22 @@ void setup() {
     screen.setup();
 
     screen.u8g2.firstPage();
-    screen.u8g2.setFont(u8g2_font_watchdoog14_t);
-    if (!finger.getCore().verifyPassword()) {
+    screen.setFontSize(14);
+    if (!finger.isConnected()) {
         do {
-            screen.u8g2.setCursor((128 - 13 * 8) / 2, (64 - 13) / 2 + 8);
-            screen.u8g2.print(F("找不到指纹模块 :("));
+            screen.drawCenter(F("找不到指纹模块 :("));
         } while (screen.u8g2.nextPage());
         buzzer.warning();
         while (true) delay(1);
     }
-    do {
-        screen.u8g2.setCursor((128 - 13 * 8) / 2, (64 - 13) / 2 + 8);
-        screen.u8g2.print(F("已找到指纹模块 :)"));
-    } while (screen.u8g2.nextPage());
 
-    // Serial.println(F("Ready to enroll a fingerprint!"));
-    // Serial.println(F("Please type in the ID # (from 1 to 127) you want to save this finger as..."));
-    // uint8_t id = read_number();
-    // if (id == 0) {  // ID #0 not allowed, try again!
-    //     return;
-    // }
-    // Serial.print(F("Enrolling ID #"));
-    // Serial.println(id);
-    // while (finger.enroll(id) != FINGERPRINT_OK);
-    // buzzer.success();
     screen.u8g2.firstPage();
     do {
-        screen.u8g2.setFont(u8g2_font_watchdoog13_t);
-        screen.drawCenterHorizontal(F("欢迎使用"), 13 + (64 - 13 - 16) / 2);
-        screen.u8g2.setFont(u8g2_font_watchdoog16_t);
-        screen.drawCenterHorizontal(F("Watchdoog"), 13 + 16 + (64 - 13 - 16) / 2);
+        screen.setFontSize(13);
+        screen.drawCenterHorizontal(F("欢迎使用"), (Screen::HEIGHT - 13 - 16) / 2);
+        screen.setFontSize(16);
+        screen.drawCenterHorizontal(F("Watchdoog"), 13 + (Screen::HEIGHT - 13 - 16) / 2);
     } while (screen.u8g2.nextPage());
-
-    // finger.enroll(1, &screen);
-}
-
-uint8_t read_number() {
-    uint8_t num = 0;
-
-    while (num == 0) {
-        while (!Serial.available());
-        num = Serial.parseInt();
-    }
-    return num;
 }
 
 void loop() {

@@ -37,7 +37,7 @@ Adafruit_Fingerprint Finger::getCore() {
 static uint8_t getOrComputeFingerIdX(Screen &screen, uint8_t *const fingerIdXPtr) {
     uint8_t fingerIdX;
     if (fingerIdXPtr == nullptr || *fingerIdXPtr == 0) {
-        fingerIdX = screen.computeStringWidth(F("注册指纹#")) + 2;
+        fingerIdX = screen.computeStringWidth(F("录入指纹#")) + 2;
         *fingerIdXPtr = fingerIdX;
     } else {
         fingerIdX = *fingerIdXPtr;
@@ -54,11 +54,11 @@ static void displayEnrollScreen(uint8_t fingerId, Screen *screen, uint8_t *const
     screen->u8g2.firstPage();
     do {
         screen->setFontSize(12);
-        screen->draw(F("录入指纹#"), 0, 12);
+        screen->draw(F("录入指纹#"), 0, 0);
         screen->u8g2.setCursor(getOrComputeFingerIdX(*screen, fingerIdXPtr), 12);
         screen->u8g2.print(fingerId);
         screen->setFontSize(14);
-        screen->drawCenterHorizontal(title, 14 + (Screen::HEIGHT - 12 - 14) / 2);
+        screen->drawCenter(title);
         if (summary != nullptr) {
             screen->setFontSize(12);
             screen->drawEndHorizontal(summary, Screen::HEIGHT - 12);
@@ -203,7 +203,7 @@ int8_t Finger::enroll(uint8_t id, Screen *screen) {
             return UNKNOWN_ERROR;
     }
 
-    displayEnrollScreen(id, screen, &fingerIdX, F("成功"));
+    displayEnrollScreen(id, screen, &fingerIdX, F("成功"), F("现在可移开手指"));
     return OK;
 }
 
@@ -213,14 +213,14 @@ static void displayVerifyScreen(Screen *screen,
 
     screen->u8g2.setPowerSave(false);
 
-    uint8_t titleY = summary == nullptr ? 16 + (Screen::HEIGHT - 16) / 2 : 16 + (Screen::HEIGHT - 16 - 12 - 4) / 2;
+    uint8_t titleY = summary == nullptr ? (Screen::HEIGHT - 16) / 2 : (Screen::HEIGHT - 16 - 12 - 4) / 2;
     screen->u8g2.firstPage();
     do {
         screen->setFontSize(16);
         screen->drawCenterHorizontal(title, titleY);
         if (summary != nullptr) {
             screen->setFontSize(12);
-            screen->drawCenterHorizontal(summary, 16 + 12 + 4 + (Screen::HEIGHT - 16 - 12 - 4) / 2);
+            screen->drawCenterHorizontal(summary, 16 + 4 + (Screen::HEIGHT - 16 - 12 - 4) / 2);
         }
     } while (screen->u8g2.nextPage());
 }
@@ -247,7 +247,6 @@ int32_t Finger::verify(Screen *screen) {
     status = finger.image2Tz();
     switch (status) {
         case FINGERPRINT_OK:
-            // Serial.println(F("Image converted"));
             break;
         case FINGERPRINT_IMAGEMESS:
             displayVerifyScreen(screen, F("图像过于混乱"), F("建议清洁传感器"));
@@ -303,7 +302,7 @@ static void displayRemoveScreen(uint8_t fingerId, Screen *screen, uint8_t *const
         screen->u8g2.setCursor(getOrComputeFingerIdX(*screen, fingerIdXPtr), 12);
         screen->u8g2.print(fingerId);
         screen->setFontSize(14);
-        screen->drawCenterHorizontal(title, 14 + (Screen::HEIGHT - 12 - 14) / 2);
+        screen->drawCenterHorizontal(title, (Screen::HEIGHT - 12 - 14) / 2);
         if (summary != nullptr) {
             screen->setFontSize(12);
             screen->drawEndHorizontal(summary, Screen::HEIGHT - 12);
@@ -317,7 +316,6 @@ uint8_t Finger::remove(uint8_t id, Screen *screen) {
 
     switch (status) {
         case FINGERPRINT_OK:
-            // Serial.println(F("Deleted!"));
             break;
         case FINGERPRINT_PACKETRECIEVEERR:
             displayRemoveScreen(id, screen, &fingerIdX, F("通信错误"));

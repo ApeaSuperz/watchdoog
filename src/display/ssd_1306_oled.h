@@ -35,6 +35,10 @@ public:
 
     void draw(const char *text, uint8_t x, uint8_t y);
 
+    void drawCenter(const __FlashStringHelper *text);
+
+    void drawCenter(const char *text);
+
     void drawCenterHorizontal(const __FlashStringHelper *text, uint8_t y);
 
     void drawCenterHorizontal(const char *text, uint8_t y);
@@ -43,10 +47,23 @@ public:
 
     void drawEndHorizontal(const char *text, uint8_t y);
 
+    void drawEndVerticalCenterHorizontal(const __FlashStringHelper *text, uint8_t x);
+
+    void drawEndVerticalCenterHorizontal(const char *text, uint8_t x);
+
     void setFontSize(uint8_t size);
 
     U8G2_SSD1306_128X64_NONAME_2_SW_I2C u8g2;
-};
 
+private:
+    uint8_t fontSize = 0;
+
+    /**
+     * 修正 Y 坐标，中文比标定字号更大，不修正 Y 坐标文字可能超出屏幕。
+     * @param y 预期 Y 坐标
+     * @return 修正后的 Y 坐标
+     */
+    uint8_t getSuitY(uint8_t y) const;
+};
 
 #endif //WATCHDOOG_SSD_1306_LED_H
