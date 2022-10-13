@@ -3,6 +3,7 @@
 #include "finger/as_608_fingerprint.h"
 #include "buzzer/active_buzzer.h"
 #include "display/ssd_1306_oled.h"
+#include "motor/sg_90_servo_motor.h"
 
 #if (defined(__AVR__) || defined(ESP8266)) && !defined(__AVR_ATmega2560__)
 // For UNO and others without hardware serial, we must use software serial...
@@ -21,12 +22,14 @@ SoftwareSerial fingerprint_serial(2, 3);
 static const unsigned int TICK = 100;
 
 unsigned long long tick = 0;
-boolean needScanFinger = true;
 uint8_t rotsCount = 0;
+boolean needScanFinger = true;
+boolean needResetMotor = false;
 
 Finger finger = Finger(&fingerprint_serial, 4);
 ActiveBuzzer buzzer = ActiveBuzzer(11);
 Screen screen = Screen();
+ServoMotor motor = ServoMotor(9);
 
 static boolean triggerEgg() {
     if (rotsCount >= 3) {
@@ -49,6 +52,7 @@ void setup() {
     buzzer.setup();
     finger.setup();
     screen.setup();
+    motor.setup();
 
     screen.u8g2.firstPage();
     screen.setFontSize(14);
@@ -80,20 +84,27 @@ void loop() {
             buzzer.warning();
 
             tick = 0;
-            needScanFinger = false;
             rotsCount++;
+            needScanFinger = false;
 
             triggerEgg();
         } else if (status > 0) {
+            motor.rotate(180);
             buzzer.success();
 
             tick = 0;
-            needScanFinger = false;
             rotsCount = 0;
+            needScanFinger = false;
+            needResetMotor = true;
         }
     } else if (!isFingerPressed) {
         finger.getCore().LEDcontrol(false);
         needScanFinger = true;
+    }
+
+    if (needResetMotor && tick > 30) {
+        motor.rotate(0);
+        needResetMotor = false;
     }
 
     if (tick > 100) {

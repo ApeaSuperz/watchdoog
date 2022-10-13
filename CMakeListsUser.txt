@@ -2,6 +2,7 @@ FILE(GLOB_RECURSE USER_SRC_LIST
     ${CMAKE_CURRENT_LIST_DIR}/src/buzzer/*.*
     ${CMAKE_CURRENT_LIST_DIR}/src/display/*.*
     ${CMAKE_CURRENT_LIST_DIR}/src/finger/*.*
+    ${CMAKE_CURRENT_LIST_DIR}/src/motor/*.*
 )
 
 list(APPEND USER_SRC_LIST ${USER_SRC_LIST})
