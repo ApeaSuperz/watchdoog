@@ -20,7 +20,7 @@ SoftwareSerial fingerprint_serial(2, 3);
 
 #endif
 
-static const unsigned int TICK = 100;
+static const unsigned int TICK = 10;
 
 unsigned long long tick = 0;
 uint8_t rotsCount = 0;
@@ -106,7 +106,6 @@ void loop() {
         needScanFinger = true;
     }
 
-    if (needResetMotor && tick > 30) {
     if (keyboard.hasNewInput()) {
         screen.u8g2.setPowerSave(false);
         screen.u8g2.firstPage();
@@ -117,11 +116,12 @@ void loop() {
         tick = 0;
     }
 
+    if (needResetMotor && tick > 300) {
         motor.rotate(0);
         needResetMotor = false;
     }
 
-    if (tick > 100) {
+    if (tick > 1000) {
         screen.u8g2.setPowerSave(true);
         keyboard.clear();
         tick = 0;
