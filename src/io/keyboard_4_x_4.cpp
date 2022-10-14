@@ -8,7 +8,11 @@ static const char KEYS[4][4] = {
 };
 
 Keyboard::Keyboard(uint8_t *colPins, uint8_t *rowPins) :
-        keypad(makeKeymap(KEYS), rowPins, colPins, ROWS, COLS) {}
+        keypad(makeKeymap(KEYS), rowPins, colPins, ROWS, COLS) {
+    in = nullptr;
+    inLength = 0;
+    inCapacity = 0;
+}
 
 void Keyboard::setup() {
     reserve(1);
@@ -51,14 +55,14 @@ boolean Keyboard::hasNewInput() const {
 
 void Keyboard::reserve(size_t capacity) {
     if (inCapacity < capacity) {
-        inCapacity = capacity;
+        inCapacity = capacity < 2 ? 2 : capacity;
         in = static_cast<char *>(realloc(in, capacity * sizeof(char)));
     }
 }
 
 void Keyboard::shrink() {
     if (inCapacity > inLength) {
-        inCapacity = inLength;
+        inCapacity = inLength < 2 ? 2 : inLength;
         in = static_cast<char *>(realloc(in, inCapacity * sizeof(char)));
     }
 }

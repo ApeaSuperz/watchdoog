@@ -36,9 +36,9 @@ public:
 private:
     Keypad keypad;
 
-    char *in = nullptr;
-    size_t inLength = 0;
-    size_t inCapacity = 0;
+    char *in;
+    size_t inLength;
+    size_t inCapacity;
 };
 
 #endif //WATCHDOOG_KEYBOARD_4_X_4_H
