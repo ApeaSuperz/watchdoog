@@ -49,7 +49,7 @@ static void displayEnrollScreen(uint8_t fingerId, Screen *screen, uint8_t *const
                                 const __FlashStringHelper *title, const __FlashStringHelper *summary = nullptr) {
     if (screen == nullptr) return;
 
-    screen->u8g2.setPowerSave(false);
+    screen->setPowerSave(false);
 
     screen->u8g2.firstPage();
     do {
@@ -211,7 +211,7 @@ static void displayVerifyScreen(Screen *screen,
                                 const __FlashStringHelper *title, const __FlashStringHelper *summary = nullptr) {
     if (screen == nullptr) return;
 
-    screen->u8g2.setPowerSave(false);
+    screen->setPowerSave(false);
 
     uint8_t titleY = summary == nullptr ? (Screen::HEIGHT - 16) / 2 : (Screen::HEIGHT - 16 - 12 - 4) / 2;
     screen->u8g2.firstPage();
@@ -293,7 +293,7 @@ static void displayRemoveScreen(uint8_t fingerId, Screen *screen, uint8_t *const
                                 const __FlashStringHelper *title, const __FlashStringHelper *summary = nullptr) {
     if (screen == nullptr) return;
 
-    screen->u8g2.setPowerSave(false);
+    screen->setPowerSave(false);
 
     screen->u8g2.firstPage();
     do {

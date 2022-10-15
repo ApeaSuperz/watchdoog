@@ -37,7 +37,7 @@ Keyboard keyboard = Keyboard(new uint8_t[4]{6, 5, PIN_A0, PIN_A1}, new uint8_t[4
 
 static boolean triggerEgg() {
     if (rotsCount >= 3) {
-        screen.u8g2.setPowerSave(false);
+        screen.setPowerSave(false);
         screen.u8g2.firstPage();
         do {
             screen.setFontSize(16);
@@ -58,6 +58,7 @@ void setup() {
     screen.setup();
     motor.setup();
     keyboard.setup();
+    Data::setup();
 
     screen.u8g2.firstPage();
     screen.setFontSize(14);
@@ -109,13 +110,18 @@ void loop() {
     }
 
     if (keyboard.hasNewInput()) {
-        screen.u8g2.setPowerSave(false);
+        tick = 0;
+
+        if (screen.isPowerSave()) {
+            screen.setPowerSave(false);
+            return;
+        }
+
         screen.u8g2.firstPage();
         do {
             screen.setFontSize(13);
             screen.drawCenter(keyboard.getInput());
         } while (screen.u8g2.nextPage());
-        tick = 0;
     }
 
     if (needResetMotor && tick > 3 SECONDS) {
@@ -124,7 +130,7 @@ void loop() {
     }
 
     if (tick > 10 SECONDS) {
-        screen.u8g2.setPowerSave(true);
+        screen.setPowerSave(true);
         keyboard.clear();
         tick = 0;
     }

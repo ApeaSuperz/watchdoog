@@ -126,3 +126,12 @@ void Screen::setFontSize(uint8_t size) {
 uint8_t Screen::getSuitY(uint8_t y) const {
     return y + fontSize >= HEIGHT ? HEIGHT - 1 : y + fontSize;
 }
+
+void Screen::setPowerSave(boolean state) {
+    u8g2.setPowerSave(state);
+    isPowerSaving = state;
+}
+
+boolean Screen::isPowerSave() const {
+    return isPowerSaving;
+}

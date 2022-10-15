@@ -53,10 +53,15 @@ public:
 
     void setFontSize(uint8_t size);
 
+    void setPowerSave(boolean state);
+
+    boolean isPowerSave() const;
+
     U8G2_SSD1306_128X64_NONAME_2_SW_I2C u8g2;
 
 private:
     uint8_t fontSize = 0;
+    boolean isPowerSaving = true;
 
     /**
      * 修正 Y 坐标，中文比标定字号更大，不修正 Y 坐标文字可能超出屏幕。
