@@ -82,20 +82,20 @@ void Screen::drawEndHorizontal(const char *text, uint8_t y) {
     u8g2.drawUTF8(x, getSuitY(y), text);
 }
 
-void Screen::drawEndVerticalCenterHorizontal(const __FlashStringHelper *text, uint8_t x) {
+void Screen::drawEndVerticalCenterHorizontal(const __FlashStringHelper *text) {
     uint8_t stringLength = strlen_P(reinterpret_cast<const char *>(text));
     auto *string = reinterpret_cast<char *>(malloc((stringLength + 1) * sizeof(char)));
     for (int i = 0; i < stringLength; i++) {
         string[i] = pgm_read_byte_near(reinterpret_cast<int>(text) + i);
     }
     string[stringLength] = '\0';
-    drawEndVerticalCenterHorizontal(string, x);
+    drawEndVerticalCenterHorizontal(string);
     free(string);
 }
 
-void Screen::drawEndVerticalCenterHorizontal(const char *text, uint8_t x) {
-    const uint8_t y = HEIGHT - computeStringWidth(text);
-    u8g2.drawUTF8(x, getSuitY(y), text);
+void Screen::drawEndVerticalCenterHorizontal(const char *text) {
+    const uint8_t x = (WIDTH - computeStringWidth(text)) / 2;
+    u8g2.drawUTF8(x, getSuitY(HEIGHT - fontSize), text);
 }
 
 void Screen::setFontSize(uint8_t size) {

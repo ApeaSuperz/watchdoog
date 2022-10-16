@@ -25,6 +25,10 @@ public:
 
     uint8_t count();
 
+    void setPowerSave(boolean state);
+
+    boolean isPowerSave() const;
+
     enum STATUS {
         OK = 0,
         NO_FINGER = -1,
@@ -47,6 +51,7 @@ public:
 private:
     int8_t touchPin;
     Adafruit_Fingerprint finger;
+    boolean isPowerSaving;
 };
 
 

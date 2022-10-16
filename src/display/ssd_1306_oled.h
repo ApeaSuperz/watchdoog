@@ -47,9 +47,9 @@ public:
 
     void drawEndHorizontal(const char *text, uint8_t y);
 
-    void drawEndVerticalCenterHorizontal(const __FlashStringHelper *text, uint8_t x);
+    void drawEndVerticalCenterHorizontal(const __FlashStringHelper *text);
 
-    void drawEndVerticalCenterHorizontal(const char *text, uint8_t x);
+    void drawEndVerticalCenterHorizontal(const char *text);
 
     void setFontSize(uint8_t size);
 

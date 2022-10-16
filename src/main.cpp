@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "constants.h"
-#include "finger/as_608_fingerprint.h"
+#include "security/as_608_fingerprint.h"
 #include "buzzer/active_buzzer.h"
 #include "display/ssd_1306_oled.h"
 #include "motor/sg_90_servo_motor.h"
@@ -41,12 +41,123 @@ static boolean triggerEgg() {
         screen.u8g2.firstPage();
         do {
             screen.setFontSize(16);
-            screen.drawCenter(F("你坤吧谁？"));
+            screen.drawCenter(("你坤吧谁？"));
         } while (screen.u8g2.nextPage());
         return true;
     }
     return false;
 }
+
+static void displayMenu(const char *addition = nullptr) {
+    screen.setPowerSave(false);
+    screen.u8g2.firstPage();
+    do {
+        screen.setFontSize(12);
+        screen.draw(("A.添加指纹"), 0, 0);
+        screen.drawEndHorizontal(("B.管理密码"), 0);
+        screen.setFontSize(13);
+        screen.drawCenterHorizontal(("欢迎使用"), (Screen::HEIGHT - 13 - 16) / 2);
+        screen.setFontSize(16);
+        screen.drawCenterHorizontal(("Watchdoog"), 13 + (Screen::HEIGHT - 13 - 16) / 2);
+
+        if (addition != nullptr) {
+            screen.setFontSize(12);
+            screen.drawEndVerticalCenterHorizontal(addition);
+        }
+    } while (screen.u8g2.nextPage());
+}
+
+static const char *getHiddenPassword() {
+    static char *password = nullptr;
+    free(password);
+
+    password = static_cast<char *>(malloc(keyboard.getInputLength() + 1));
+    for (uint8_t i = 0; i < keyboard.getInputLength(); ++i) {
+        password[i] = '*';
+    }
+    password[keyboard.getInputLength()] = '\0';
+
+    return password;
+}
+
+static boolean requireAccess(const char *title, uint8_t timeoutInSeconds) {
+    screen.u8g2.firstPage();
+    do {
+        screen.setFontSize(12);
+        screen.drawCenterHorizontal(title, 0);
+        screen.setFontSize(14);
+        screen.drawCenterHorizontal(("验证已有指纹或密码"), (Screen::HEIGHT - 12 - 14) / 2 + 12);
+    } while (screen.u8g2.nextPage());
+
+    while (tick < timeoutInSeconds SECONDS) {
+        tick++;
+        keyboard.tick();
+
+        if (finger.isFingerPressed()) {
+            finger.setPowerSave(false);
+
+            int32_t status = finger.verify(&screen);
+            if (status > 0) return true;
+        } else {
+            finger.setPowerSave(true);
+        }
+
+        if (keyboard.hasNewInput()) {
+            // if (Passwords::verify(keyboard.getInput())) return true;
+            if (strcmp(keyboard.getInput(), SUPER_ADMIN_PASSWORD) == 0) return true;
+
+            screen.u8g2.firstPage();
+            do {
+                screen.setFontSize(12);
+                screen.drawCenterHorizontal(title, 0);
+                screen.setFontSize(14);
+                screen.drawCenterHorizontal(keyboard.getInput(), (Screen::HEIGHT - 12 - 14) / 2 + 12);
+            } while (screen.u8g2.nextPage());
+        }
+
+        delay(TICK);
+    }
+
+    // 超时未验证
+    return false;
+}
+
+static void addFingerprint() {
+    if (requireAccess(("添加指纹"), 15)) {
+        finger.enroll(finger.count() + 1, &screen);
+    }
+}
+
+// static void managerPasswords() {
+//     if (requireAccess(("管理密码"), 15)) {
+//         screen.u8g2.firstPage();
+//         do {
+//             screen.setFontSize(14);
+//             screen.draw(("1. 添加密码"), 0, 0);
+//             screen.draw(("2. 删除密码"), 0, 14);
+//             screen.draw(("3. 返回"), 0, 28);
+//         } while (screen.u8g2.nextPage());
+//
+//         while (true) {
+//             if (keyboard.hasNewInput()) {
+//                 switch (keyboard.getInput()[0]) {
+//                     case '1':
+//                         Passwords::add(keyboard, &screen);
+//                         return;
+//                     case '2':
+//                         Passwords::remove(keyboard, &screen);
+//                         return;
+//                     case '3':
+//                         return;
+//                     default:
+//                         break;
+//                 }
+//                 keyboard.clear();
+//             }
+//             delay(TICK);
+//         }
+//     }
+// }
 
 void setup() {
     Serial.begin(9600);
@@ -58,25 +169,20 @@ void setup() {
     screen.setup();
     motor.setup();
     keyboard.setup();
-    Data::setup();
+    // Data::setup();
+    // Passwords::setup();
 
-    screen.u8g2.firstPage();
-    screen.setFontSize(14);
     if (!finger.isConnected()) {
+        screen.u8g2.firstPage();
+        screen.setFontSize(14);
         do {
-            screen.drawCenter(F("找不到指纹模块 :("));
+            screen.drawCenter(("找不到指纹模块 :("));
         } while (screen.u8g2.nextPage());
         buzzer.warning();
         while (true) delay(1);
     }
 
-    screen.u8g2.firstPage();
-    do {
-        screen.setFontSize(13);
-        screen.drawCenterHorizontal(F("欢迎使用"), (Screen::HEIGHT - 13 - 16) / 2);
-        screen.setFontSize(16);
-        screen.drawCenterHorizontal(F("Watchdoog"), 13 + (Screen::HEIGHT - 13 - 16) / 2);
-    } while (screen.u8g2.nextPage());
+    displayMenu();
 }
 
 void loop() {
@@ -85,7 +191,7 @@ void loop() {
 
     const boolean isFingerPressed = finger.isFingerPressed();
     if (needScanFinger && isFingerPressed) {
-        finger.getCore().LEDcontrol(true);
+        finger.setPowerSave(false);
         int32_t status = finger.verify(&screen);
         if (status <= 0 && status != finger.NO_FINGER) {
             buzzer.warning();
@@ -103,9 +209,11 @@ void loop() {
             rotsCount = 0;
             needScanFinger = false;
             needResetMotor = true;
+
+            keyboard.clear();
         }
     } else if (!isFingerPressed) {
-        finger.getCore().LEDcontrol(false);
+        finger.setPowerSave(true);
         needScanFinger = true;
     }
 
@@ -113,15 +221,49 @@ void loop() {
         tick = 0;
 
         if (screen.isPowerSave()) {
+            keyboard.clear();
             screen.setPowerSave(false);
+            displayMenu();
             return;
+        } else {
+            displayMenu(getHiddenPassword());
         }
 
-        screen.u8g2.firstPage();
-        do {
-            screen.setFontSize(13);
-            screen.drawCenter(keyboard.getInput());
-        } while (screen.u8g2.nextPage());
+        if (keyboard.getInputLength() == 1) {
+            switch (keyboard.getInput()[0]) {
+                case 'A':
+                    keyboard.clear();
+                    addFingerprint();
+                    break;
+                case 'B':
+                    keyboard.clear();
+                    // managerPasswords();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // if (Passwords::verify(keyboard.getInput())) {
+        //     keyboard.clear();
+        //     buzzer.success();
+        //     motor.rotate(180);
+        //     rotsCount = 0;
+        //     needResetMotor = true;
+        // } else {
+        //     screen.u8g2.firstPage();
+        //     do {
+        //         screen.setFontSize(13);
+        //         screen.drawCenter(keyboard.getInput());
+        //     } while (screen.u8g2.nextPage());
+        // }
+        if (strcmp(keyboard.getInput(), SUPER_ADMIN_PASSWORD) == 0) {
+            keyboard.clear();
+            buzzer.success();
+            motor.rotate(180);
+            rotsCount = 0;
+            needResetMotor = true;
+        }
     }
 
     if (needResetMotor && tick > 3 SECONDS) {

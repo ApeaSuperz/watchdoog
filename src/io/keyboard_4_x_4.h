@@ -33,6 +33,8 @@ public:
 
     const char *getInput();
 
+    uint8_t getInputLength() const;
+
 private:
     Keypad keypad;
 

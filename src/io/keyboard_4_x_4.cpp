@@ -70,3 +70,7 @@ void Keyboard::shrink() {
 const char *Keyboard::getInput() {
     return in;
 }
+
+uint8_t Keyboard::getInputLength() const {
+    return inLength - 1;
+}
